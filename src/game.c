@@ -30,6 +30,7 @@ static long int game_over_stop_time = 0;
 static bool paused = false;
 static bool show_debug = false;
 static bool use_shapes = false;
+static bool god_mode = false;
 
 static const GPathInfo METEOR1_PATH_INFO = {
   .num_points = 10,
@@ -141,9 +142,6 @@ static bool is_part_of_meteor(int x, int y, int max_r, Meteor* meteor)
 // Checks ship and meteor interception
 static bool is_boom(Meteor* meteor)
 {
-#ifdef GOD_MODE
-	return false;
-#endif	
 	return is_part_of_meteor(ship_x, ship_y, 7, meteor);
 }
 
@@ -157,10 +155,11 @@ static void update_meteors()
 		meteor->x += meteor->speed_x;
 		meteor->y += meteor->speed_y;
 		// Game over?
-		if (!game_over && is_boom(meteor))
+		if (!game_over && is_boom(meteor) && !game_over_stop_time)
 		{
 			vibes_short_pulse();
-			game_over_stop_time = time_ticks + (500 / UPDATE_INTERVAL); // Some more time to rumble...
+			if (!god_mode)
+				game_over_stop_time = time_ticks + (500 / UPDATE_INTERVAL); // Some more time to rumble...
 			//reset_game();
 		}
 		meteor = meteor->next;
@@ -302,7 +301,7 @@ static void game_draw(Layer *layer, GContext *ctx)
 	{
 		GFont *tutorial_font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
 		if (time_ticks < 3000 / UPDATE_INTERVAL && hi_score < 200)
-			graphics_draw_text(ctx, "Tilt your watches to control the spaceship", tutorial_font, (GRect) { .origin = {0, 130}, .size = {144, 30} }, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+			graphics_draw_text(ctx, "Tilt your watch to control the spaceship", tutorial_font, (GRect) { .origin = {0, 130}, .size = {144, 30} }, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 		else if (time_ticks < 6000 / UPDATE_INTERVAL && hi_score < 200)
 			graphics_draw_text(ctx, "Avoid asteroids!",  tutorial_font, (GRect) { .origin = {0, 130}, .size = {144, 30} }, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 		else if (time_ticks < 9000 / UPDATE_INTERVAL && hi_score < 200)
@@ -353,16 +352,14 @@ static void game_draw(Layer *layer, GContext *ctx)
 		graphics_draw_text(ctx, "PRESS ANY BUTTON", game_over_comment_font, (GRect) { .origin = {25, 92}, .size = {94, 30} }, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 		
 	}	
-	else if (paused) // "PAUSED" box
+	else if (paused && !god_mode) // "PAUSED" box
 	{
-#ifndef GOD_MODE	
 		graphics_context_set_stroke_color(ctx, GColorBlack); 
 		graphics_draw_rect(ctx, GRect(44, 76, 55, 16));
 		graphics_context_set_fill_color(ctx, GColorWhite); 
 		graphics_fill_rect(ctx, GRect(45, 77, 53, 14), 0, GCornerNone);
 		GFont *paused_font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
 		graphics_draw_text(ctx, "PAUSED", paused_font, (GRect) { .origin = {0, 75}, .size = {144, 30} }, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-#endif		
 	}
 	
 	// Some debug info
@@ -416,8 +413,22 @@ static void click_handler(ClickRecognizerRef recognizer, void *context)
 	else paused = !paused;
 }
 
-static void click_down_handler(ClickRecognizerRef recognizer, void *context) 
+static void long_up_handler(ClickRecognizerRef recognizer, void *context) 
 {
+	// God mode!
+	god_mode = !god_mode;
+	vibes_short_pulse();
+}
+
+static void long_select_handler(ClickRecognizerRef recognizer, void *context) 
+{
+	// Some debug info...
+	show_debug = !show_debug;
+}
+
+static void long_down_handler(ClickRecognizerRef recognizer, void *context) 
+{
+	// Experimental "shapes" mode
 	use_shapes = !use_shapes;
 }
 
@@ -426,7 +437,10 @@ static void config_provider(void *context)
 {
   window_single_click_subscribe(BUTTON_ID_UP, click_handler);
 	window_single_click_subscribe(BUTTON_ID_SELECT, click_handler);
-  window_single_click_subscribe(BUTTON_ID_DOWN, click_down_handler);
+  window_single_click_subscribe(BUTTON_ID_DOWN, click_handler);
+	window_long_click_subscribe(BUTTON_ID_UP, 10000, long_up_handler, NULL);
+	window_long_click_subscribe(BUTTON_ID_SELECT, 10000, long_select_handler, NULL);
+	window_long_click_subscribe(BUTTON_ID_DOWN, 1000, long_down_handler, NULL);
 }
 
 void reset_game()
