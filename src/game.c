@@ -29,6 +29,20 @@ static bool game_over = true;
 static long int game_over_stop_time = 0;
 static bool paused = false;
 static bool show_debug = false;
+static bool use_shapes = false;
+
+static const GPathInfo METEOR1_PATH_INFO = {
+  .num_points = 10,
+  .points = (GPoint []) {{-4, -10}, {5, -9}, {9, -8}, {7, 0}, {9, 5}, {4, 9}, {0, 7}, {-10, 9}, {-8, 0}, {-10, -5}}
+};
+static const GPathInfo METEOR2_PATH_INFO = {
+  .num_points = 12,
+  .points = (GPoint []) {{-1, -10}, {8, -8}, {7, -4}, {9, 0}, {8, 7}, {0, 9}, {-5, 9}, {-9, 7}, {-8, 3}, {-10, 0}, {-8, -4}, {-8, -8}}
+};
+static const GPathInfo METEOR3_PATH_INFO = {
+  .num_points = 12,
+  .points = (GPoint []) {{-10, -10}, {-5, -8}, {1, -10}, {8, -10}, {9, -5}, {6, -1}, {9, 9}, {0, 9}, {-5, 7}, {-10, 9}, {-8, 3}, {-10, -2}}
+};
 
 // More meteors!
 static void add_meteor()
@@ -71,6 +85,35 @@ static void add_meteor()
 		else
 			new_meteor->x = -new_meteor->size;
 	}
+	
+	// Selecting random path-shape
+	GPathInfo* original_path = NULL;
+	switch (rand() % 2)
+	{
+		case 0:
+			original_path = (GPathInfo*)&METEOR1_PATH_INFO;
+			break;
+		case 1:
+			original_path = (GPathInfo*)&METEOR2_PATH_INFO;
+			break;
+		case 2:
+			original_path = (GPathInfo*)&METEOR3_PATH_INFO;
+			break;
+	}
+	new_meteor->path.num_points = original_path->num_points;
+	new_meteor->path.points = malloc(sizeof(GPoint) * new_meteor->path.num_points);
+
+	// Reducing size...
+	unsigned int p;
+	for (p = 0; p < new_meteor->path.num_points; p++)
+	{
+		new_meteor->path.points[p].x = original_path->points[p].x * (new_meteor->size + 4) / 20;
+		new_meteor->path.points[p].y = original_path->points[p].y * (new_meteor->size + 4) / 20;
+	}
+	new_meteor->draw_path = gpath_create(&new_meteor->path);
+	new_meteor->rot = 0;
+	new_meteor->rot_speed = 1;
+	if (rand() % 2) new_meteor->rot_speed *= -1;
 
 	new_meteor->next = NULL;
 	
@@ -98,6 +141,9 @@ static bool is_part_of_meteor(int x, int y, int max_r, Meteor* meteor)
 // Checks ship and meteor interception
 static bool is_boom(Meteor* meteor)
 {
+#ifdef GOD_MODE
+	return false;
+#endif	
 	return is_part_of_meteor(ship_x, ship_y, 7, meteor);
 }
 
@@ -146,7 +192,8 @@ static void update_meteors()
 				else if ((score % 500 == 0) && (meteor_interval > 5)) 
 					meteor_interval -= 1;
 			}
-				
+			gpath_destroy(meteor->draw_path);
+			free(meteor->path.points);
 			free(meteor);
 			if (prev != NULL)
 				prev->next = next;
@@ -212,7 +259,9 @@ void update_timer(void* data)
 static void game_draw(Layer *layer, GContext *ctx)
 { 
 	graphics_context_set_text_color(ctx, GColorBlack);
-
+	graphics_context_set_stroke_color(ctx, GColorBlack);
+	graphics_context_set_fill_color(ctx, GColorBlack); 
+	
 	// Draw ship
 	if (started && !game_over)
 	{
@@ -226,7 +275,15 @@ static void game_draw(Layer *layer, GContext *ctx)
 	int meteor_count = 0;
 	while (meteor)
 	{
-		graphics_fill_circle(ctx, (GPoint) { .x = meteor->x, .y = meteor->y }, meteor->size / 2);
+		if (meteor->size < 8 || !use_shapes)
+		{
+			graphics_fill_circle(ctx, (GPoint) { .x = meteor->x, .y = meteor->y }, meteor->size / 2);
+		} else {		
+			gpath_move_to(meteor->draw_path, GPoint(meteor->x, meteor->y));
+			gpath_rotate_to(meteor->draw_path, TRIG_MAX_ANGLE / 360 * (meteor->rot += meteor->rot_speed));
+			gpath_draw_filled(ctx, meteor->draw_path);
+		//gpath_draw_outline(ctx, meteor->draw_path);
+		}
 		meteor_count++;
 		meteor = meteor->next;
 	}
@@ -272,7 +329,6 @@ static void game_draw(Layer *layer, GContext *ctx)
 		
 		GFont *copyright_font = fonts_get_system_font(FONT_KEY_GOTHIC_14);
 		graphics_draw_text(ctx, "(c) Cluster, 2014", copyright_font, (GRect) { .origin = {25, 118}, .size = {94, 30} }, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-		
 	}
 	else if (game_over) // "GAME OVER" box
 	{
@@ -299,12 +355,14 @@ static void game_draw(Layer *layer, GContext *ctx)
 	}	
 	else if (paused) // "PAUSED" box
 	{
+#ifndef GOD_MODE	
 		graphics_context_set_stroke_color(ctx, GColorBlack); 
 		graphics_draw_rect(ctx, GRect(44, 76, 55, 16));
 		graphics_context_set_fill_color(ctx, GColorWhite); 
 		graphics_fill_rect(ctx, GRect(45, 77, 53, 14), 0, GCornerNone);
 		GFont *paused_font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
 		graphics_draw_text(ctx, "PAUSED", paused_font, (GRect) { .origin = {0, 75}, .size = {144, 30} }, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+#endif		
 	}
 	
 	// Some debug info
@@ -329,6 +387,8 @@ static void free_meteors()
 	while (meteor)
 	{
 		Meteor* next = meteor->next;
+		gpath_destroy(meteor->draw_path);
+		free(meteor->path.points);
 		free(meteor);
 		meteor = next;
 	}
@@ -356,11 +416,17 @@ static void click_handler(ClickRecognizerRef recognizer, void *context)
 	else paused = !paused;
 }
 
+static void click_down_handler(ClickRecognizerRef recognizer, void *context) 
+{
+	use_shapes = !use_shapes;
+}
+
+
 static void config_provider(void *context)
 {
   window_single_click_subscribe(BUTTON_ID_UP, click_handler);
 	window_single_click_subscribe(BUTTON_ID_SELECT, click_handler);
-  window_single_click_subscribe(BUTTON_ID_DOWN, click_handler);
+  window_single_click_subscribe(BUTTON_ID_DOWN, click_down_handler);
 }
 
 void reset_game()
@@ -382,7 +448,7 @@ void show_game() {
 	reset_game();
 	game_over = true;
 	started = false;
-	meteor_interval = 10;
+	meteor_interval = 5;
 	
 	// Reading hi-score from memory
 	if (persist_exists(0))	

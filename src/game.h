@@ -1,4 +1,4 @@
-#define VERSION "v1.2"
+#define VERSION "v1.3"
 
 typedef struct Meteor {
 	float x;
@@ -6,6 +6,10 @@ typedef struct Meteor {
 	float speed_x;
 	float speed_y;
 	int size;
+	GPathInfo path;
+	GPath *draw_path;
+	int rot;
+	int rot_speed;
 	struct Meteor* next;
 } Meteor;
 
