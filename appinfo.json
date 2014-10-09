@@ -1,0 +1,29 @@
+{
+  "uuid": "130049db-8847-4d94-b619-58ced0e537eb",
+  "shortName": "Space Dragon",
+  "longName": "Space Dragon",
+  "companyName": "Cluster",
+  "versionCode": 3,
+  "versionLabel": "1.2",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": [
+        {
+						"file": "images/ship.png",
+            "name": "IMAGE_SHIP",
+            "type": "png"
+        },
+        {
+						"file": "images/icon.png",
+            "menuIcon": true,
+            "name": "IMAGE_ICON",
+            "type": "png"
+        }
+		]
+  }
+}
