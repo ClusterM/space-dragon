@@ -6,13 +6,6 @@ static Layer *gfx_layer;
 static AppTimer *timer;
 static GBitmap *ship_bitmap;
 
-const int SHIP_WIDTH = 10;
-const int SHIP_HEIGHT = 15;
-const int SCREEN_WIDTH = 144;
-const int SCREEN_HEIGHT = 168;
-const int UPDATE_INTERVAL = 25;
-const int ASTEROID_START_INTERVAL = 40;
-
 static long int time_ticks = 0;
 static float ship_x;
 static float ship_y;
@@ -32,6 +25,7 @@ static bool show_debug = false;
 static bool use_shapes = false;
 static bool god_mode = false;
 
+// Some path-shapes for asteroids
 static const GPathInfo ASTEROID1_PATH_INFO = {
   .num_points = 10,
   .points = (GPoint []) {{-4, -10}, {5, -9}, {9, -8}, {7, 0}, {9, 5}, {4, 9}, {0, 7}, {-10, 9}, {-8, 0}, {-10, -5}}
@@ -137,7 +131,7 @@ static void add_asteroid()
 	}
 }
 
-// Is point part of asteroid?
+// Part of asteroid?
 static bool is_part_of_asteroid(int x, int y, int max_r, Asteroid* asteroid)
 {
 	int r = asteroid->size/2 + max_r;
@@ -162,7 +156,7 @@ static void update_asteroids()
 		asteroid->x += asteroid->speed_x;
 		asteroid->y += asteroid->speed_y;
 		// Game over?
-		if (!game_over && is_boom(asteroid) && !game_over_stop_time)
+		if (is_boom(asteroid) && !game_over_stop_time)
 		{
 			vibes_short_pulse();
 			if (!god_mode)
@@ -235,7 +229,7 @@ void update_timer(void* data)
 	time_ticks++;
 	
 	// More asteroids!
-	if (((time_ticks >= 5000 / UPDATE_INTERVAL) || (hi_score >= 200) // Newbie? Time for some tutorial
+	if (((time_ticks >= 5000 / UPDATE_INTERVAL) || (hi_score >= MIN_TUTORIAL_SCORE) // Newbie? Time for some tutorial
 		|| !started)  // Title screen? Lets go!
 		&& (time_ticks % asteroid_interval == 0)) // Or just time is come
 		add_asteroid();
@@ -262,6 +256,7 @@ void update_timer(void* data)
 	update_asteroids();
 }
 
+// Drawing all stuff
 static void game_draw(Layer *layer, GContext *ctx)
 { 
 	graphics_context_set_text_color(ctx, GColorBlack);
@@ -269,9 +264,8 @@ static void game_draw(Layer *layer, GContext *ctx)
 	graphics_context_set_fill_color(ctx, GColorBlack); 
 	
 	// Draw ship
-	if (started && !game_over)
+	if (!game_over)
 	{
-		//graphics_context_set_fill_color(ctx, GColorBlack); 
 		//graphics_fill_rect(ctx, GRect(ship_x - SHIP_WIDTH / 2, ship_y - SHIP_HEIGHT / 2, SHIP_WIDTH, SHIP_HEIGHT), 3, GCornersAll);
 		graphics_draw_bitmap_in_rect(ctx, ship_bitmap, GRect(ship_x - SHIP_WIDTH / 2, ship_y - SHIP_HEIGHT / 2, SHIP_WIDTH, SHIP_HEIGHT));
 	}
@@ -304,20 +298,19 @@ static void game_draw(Layer *layer, GContext *ctx)
 	}
 
 	// Some tutorial
-	if (started)
+	if (started && (hi_score < MIN_TUTORIAL_SCORE))
 	{
 		GFont *tutorial_font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
-		if (time_ticks < 3000 / UPDATE_INTERVAL && hi_score < 200)
+		if (time_ticks < 3000 / UPDATE_INTERVAL)
 			graphics_draw_text(ctx, "Tilt your watch to control the spaceship", tutorial_font, (GRect) { .origin = {0, 130}, .size = {144, 30} }, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-		else if (time_ticks < 6000 / UPDATE_INTERVAL && hi_score < 200)
+		else if (time_ticks < 6000 / UPDATE_INTERVAL)
 			graphics_draw_text(ctx, "Avoid asteroids!",  tutorial_font, (GRect) { .origin = {0, 130}, .size = {144, 30} }, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-		else if (time_ticks < 9000 / UPDATE_INTERVAL && hi_score < 200)
+		else if (time_ticks < 9000 / UPDATE_INTERVAL)
 			graphics_draw_text(ctx, "Good luck!",  tutorial_font, (GRect) { .origin = {0, 130}, .size = {144, 30} }, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 	}
 	
 	if (!started) // Title screen
 	{
-		graphics_context_set_stroke_color(ctx, GColorBlack); 
 		graphics_draw_rect(ctx, GRect(20, 36, 103, 102));
 		graphics_context_set_fill_color(ctx, GColorWhite); 
 		graphics_fill_rect(ctx, GRect(21, 37, 101, 100), 0, GCornerNone);
@@ -338,7 +331,6 @@ static void game_draw(Layer *layer, GContext *ctx)
 	}
 	else if (game_over) // "GAME OVER" box
 	{
-		graphics_context_set_stroke_color(ctx, GColorBlack); 
 		graphics_draw_rect(ctx, GRect(20, 46, 103, 82));
 		graphics_context_set_fill_color(ctx, GColorWhite); 
 		graphics_fill_rect(ctx, GRect(21, 47, 101, 80), 0, GCornerNone);
@@ -361,7 +353,6 @@ static void game_draw(Layer *layer, GContext *ctx)
 	}	
 	else if (paused && !god_mode) // "PAUSED" box
 	{
-		graphics_context_set_stroke_color(ctx, GColorBlack); 
 		graphics_draw_rect(ctx, GRect(44, 76, 55, 16));
 		graphics_context_set_fill_color(ctx, GColorWhite); 
 		graphics_fill_rect(ctx, GRect(45, 77, 53, 14), 0, GCornerNone);
@@ -408,12 +399,13 @@ static void handle_window_unload(Window* window) {
 	persist_write_int(0, hi_score); // Saving hi score
 }
 
+// Automatic pause on call/notification
 void app_in_focus_callback(bool in_focus)
 {
 	if (!in_focus && started && !game_over) paused = true;
 }
 
-
+// Any button
 static void click_handler(ClickRecognizerRef recognizer, void *context) 
 {
 	if (!started || game_over) reset_game();
@@ -422,7 +414,7 @@ static void click_handler(ClickRecognizerRef recognizer, void *context)
 
 static void long_up_handler(ClickRecognizerRef recognizer, void *context) 
 {
-	// God mode!
+	// God mode! Just for testing and screenshots.
 	god_mode = !god_mode;
 	vibes_short_pulse();
 }
@@ -435,7 +427,7 @@ static void long_select_handler(ClickRecognizerRef recognizer, void *context)
 
 static void long_down_handler(ClickRecognizerRef recognizer, void *context) 
 {
-	// Experimental "shapes" mode
+	// Experimental "shape" mode
 	use_shapes = !use_shapes;
 }
 
@@ -468,6 +460,8 @@ void reset_game()
 
 void show_game() {
 	reset_game();	
+	
+	// For title screen...
 	game_over = true;
 	started = false;
 	asteroid_interval = 5;
@@ -481,7 +475,7 @@ void show_game() {
 	// Loading ship bitmap
 	ship_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP);
 
-	// Crating window
+	// Creating window
 	s_window = window_create();
   window_set_background_color(s_window, GColorWhite);
   window_set_fullscreen(s_window, true);
@@ -501,8 +495,11 @@ void show_game() {
 	
   window_stack_push(s_window, true);
 	
+	// Game timer
 	timer = app_timer_register(UPDATE_INTERVAL, (AppTimerCallback) update_timer, NULL);
+	// Acceleromter
 	accel_data_service_subscribe(0, NULL);
 	accel_service_set_sampling_rate(ACCEL_SAMPLING_100HZ);
+	// Automatic pause
 	app_focus_service_subscribe(app_in_focus_callback);
 }
