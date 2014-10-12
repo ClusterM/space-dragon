@@ -1,7 +1,8 @@
 #ifndef _GAME_H_
 #define _GAME_H_
 
-#define VERSION "v1.4"
+#define VERSION "v1.5"
+#define ACC_DEATH_ZONE 0.5
 #define SHIP_WIDTH 10
 #define SHIP_HEIGHT 15
 #define SCREEN_WIDTH 144

@@ -245,9 +245,11 @@ void update_timer(void* data)
 	acc_y = acc.y;
 	
 	// Moving ship
-	speed_x = acc_x / 32;
-	speed_y = -acc_y / 32;
-	ship_x += speed_x;
+	speed_x = acc_x / 32.0;
+	speed_y = -acc_y / 32.0;
+	if (speed_x >= ACC_DEATH_ZONE || speed_x <= -ACC_DEATH_ZONE)
+		ship_x += speed_x;
+	if (speed_y >= ACC_DEATH_ZONE || speed_y <= -ACC_DEATH_ZONE)
 	ship_y += speed_y;
 	
 	// Some limits
