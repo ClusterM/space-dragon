@@ -1,6 +1,12 @@
 #include <pebble.h>
 #include "game.h"
 
+/*
+*** Author: Cluster aka Alexey Avdyukhin
+*** Mailto: clusterrr@clusterrr.com
+*** http://clusterrr.com
+*/
+
 static Window *s_window;
 static Layer *gfx_layer;
 static AppTimer *timer;
@@ -234,7 +240,7 @@ void update_timer(void* data)
 
 	// Using accelerometer data to control ship
 	AccelData acc;
-  accel_service_peek(&acc);
+	accel_service_peek(&acc);
 	acc_x = acc.x;
 	acc_y = acc.y;
 	
@@ -475,23 +481,23 @@ void show_game() {
 
 	// Creating window
 	s_window = window_create();
-  window_set_background_color(s_window, GColorWhite);
-  window_set_fullscreen(s_window, true);
+	window_set_background_color(s_window, GColorWhite);
+	window_set_fullscreen(s_window, true);
 	
 	window_set_window_handlers(s_window, (WindowHandlers) {
 		.unload = handle_window_unload,
   });
 
 	// The layer
-  Layer *window_layer = window_get_root_layer(s_window);
-  GRect bounds = layer_get_frame(window_layer);
+	Layer *window_layer = window_get_root_layer(s_window);
+	GRect bounds = layer_get_frame(window_layer);
 	gfx_layer = layer_create(bounds);
 	layer_set_update_proc(gfx_layer, game_draw);
 	layer_add_child(window_layer, gfx_layer);
 	
 	window_set_click_config_provider(s_window, config_provider);
 	
-  window_stack_push(s_window, true);
+	window_stack_push(s_window, true);
 	
 	// Game timer
 	timer = app_timer_register(UPDATE_INTERVAL, (AppTimerCallback) update_timer, NULL);
