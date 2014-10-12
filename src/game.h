@@ -1,6 +1,6 @@
 #define VERSION "v1.3"
 
-typedef struct Meteor {
+typedef struct Asteroid {
 	float x;
 	float y;
 	float speed_x;
@@ -10,8 +10,8 @@ typedef struct Meteor {
 	GPath *draw_path;
 	int rot;
 	int rot_speed;
-	struct Meteor* next;
-} Meteor;
+	struct Asteroid* next;
+} Asteroid;
 
 void show_game();
 void reset_game();

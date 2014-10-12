@@ -11,7 +11,7 @@ const int SHIP_HEIGHT = 15;
 const int SCREEN_WIDTH = 144;
 const int SCREEN_HEIGHT = 168;
 const int UPDATE_INTERVAL = 25;
-const int METEOR_START_INTERVAL = 40;
+const int ASTEROID_START_INTERVAL = 40;
 
 static long int time_ticks = 0;
 static float ship_x;
@@ -20,10 +20,10 @@ static float speed_x = 0;
 static float speed_y = 0;
 static int acc_x = 0;
 static int acc_y = 0;
-static int meteor_interval;
+static int asteroid_interval;
 static int score;
 static int hi_score = 0;
-static Meteor* first_meteor = NULL;
+static Asteroid* first_asteroid = NULL;
 static bool started = false;
 static bool game_over = true;
 static long int game_over_stop_time = 0;
@@ -32,174 +32,181 @@ static bool show_debug = false;
 static bool use_shapes = false;
 static bool god_mode = false;
 
-static const GPathInfo METEOR1_PATH_INFO = {
+static const GPathInfo ASTEROID1_PATH_INFO = {
   .num_points = 10,
   .points = (GPoint []) {{-4, -10}, {5, -9}, {9, -8}, {7, 0}, {9, 5}, {4, 9}, {0, 7}, {-10, 9}, {-8, 0}, {-10, -5}}
 };
-static const GPathInfo METEOR2_PATH_INFO = {
+static const GPathInfo ASTEROID2_PATH_INFO = {
   .num_points = 12,
   .points = (GPoint []) {{-1, -10}, {8, -8}, {7, -4}, {9, 0}, {8, 7}, {0, 9}, {-5, 9}, {-9, 7}, {-8, 3}, {-10, 0}, {-8, -4}, {-8, -8}}
 };
-static const GPathInfo METEOR3_PATH_INFO = {
-  .num_points = 12,
-  .points = (GPoint []) {{-10, -10}, {-5, -8}, {1, -10}, {8, -10}, {9, -5}, {6, -1}, {9, 9}, {0, 9}, {-5, 7}, {-10, 9}, {-8, 3}, {-10, -2}}
+static const GPathInfo ASTEROID3_PATH_INFO = {
+  .num_points = 8,
+  .points = (GPoint []) {{-3, -10}, {4, -9}, {9, -2}, {9, 4}, {3, 9}, {-4, 9}, {-10, 3}, {-9, -5}}
+};
+static const GPathInfo ASTEROID4_PATH_INFO = {
+  .num_points = 10,
+  .points = (GPoint []) {{-3, -10}, {7, -8}, {9, -2}, {8, -3}, {3, 9}, {-4, 9}, {-10, 7}, {-9, 3}, {-10, -3}, {-8, -8}}
 };
 
-// More meteors!
-static void add_meteor()
+// More asteroids!
+static void add_asteroid()
 {
-	Meteor* new_meteor = malloc(sizeof(Meteor));
-	new_meteor->size = 5 + (rand() % 15);
+	Asteroid* new_asteroid = malloc(sizeof(Asteroid));
+	new_asteroid->size = 5 + (rand() % 15);
 	
 	// left-right or up-down?
 	if (rand() % 2)
 	{
-		new_meteor->x = rand() % SCREEN_WIDTH;
-		new_meteor->speed_x = 0.2 * (1 + (rand() % 5));
-		if ((new_meteor->x > SCREEN_WIDTH / 2) && (new_meteor->speed_x > 0))
-			new_meteor->speed_x *= -1;
+		new_asteroid->x = rand() % SCREEN_WIDTH;
+		new_asteroid->speed_x = 0.2 * (1 + (rand() % 5));
+		if ((new_asteroid->x > SCREEN_WIDTH / 2) && (new_asteroid->speed_x > 0))
+			new_asteroid->speed_x *= -1;
 	
-		new_meteor->speed_y = 0.5 * (1 + (rand() % 5));
+		new_asteroid->speed_y = 0.5 * (1 + (rand() % 5));
 	
 		// Top or bottom side?
 		if (rand() % 2)
 		{
-			new_meteor->y = SCREEN_HEIGHT + new_meteor->size;
-			new_meteor->speed_y *= -1;
+			new_asteroid->y = SCREEN_HEIGHT + new_asteroid->size;
+			new_asteroid->speed_y *= -1;
 		}
 		else
-			new_meteor->y = -new_meteor->size;
+			new_asteroid->y = -new_asteroid->size;
 	} else {
-		new_meteor->y = rand() % SCREEN_HEIGHT;
-		new_meteor->speed_y = 0.2 * (1 + (rand() % 5));
-		if ((new_meteor->y > SCREEN_HEIGHT / 2) && (new_meteor->speed_y > 0))
-			new_meteor->speed_y *= -1;
+		new_asteroid->y = rand() % SCREEN_HEIGHT;
+		new_asteroid->speed_y = 0.2 * (1 + (rand() % 5));
+		if ((new_asteroid->y > SCREEN_HEIGHT / 2) && (new_asteroid->speed_y > 0))
+			new_asteroid->speed_y *= -1;
 
-		new_meteor->speed_x = 0.5 * (1 + (rand() % 5));
+		new_asteroid->speed_x = 0.5 * (1 + (rand() % 5));
 	
 		// Left or right side?
 		if (rand() % 2)
 		{
-			new_meteor->x = SCREEN_WIDTH + new_meteor->size;
-			new_meteor->speed_x *= -1;
+			new_asteroid->x = SCREEN_WIDTH + new_asteroid->size;
+			new_asteroid->speed_x *= -1;
 		}
 		else
-			new_meteor->x = -new_meteor->size;
+			new_asteroid->x = -new_asteroid->size;
 	}
 	
 	// Selecting random path-shape
 	GPathInfo* original_path = NULL;
-	switch (rand() % 2)
+	switch (rand() % 4)
 	{
 		case 0:
-			original_path = (GPathInfo*)&METEOR1_PATH_INFO;
+			original_path = (GPathInfo*)&ASTEROID1_PATH_INFO;
 			break;
 		case 1:
-			original_path = (GPathInfo*)&METEOR2_PATH_INFO;
+			original_path = (GPathInfo*)&ASTEROID2_PATH_INFO;
 			break;
 		case 2:
-			original_path = (GPathInfo*)&METEOR3_PATH_INFO;
+			original_path = (GPathInfo*)&ASTEROID3_PATH_INFO;
+			break;
+		case 3:
+			original_path = (GPathInfo*)&ASTEROID4_PATH_INFO;
 			break;
 	}
-	new_meteor->path.num_points = original_path->num_points;
-	new_meteor->path.points = malloc(sizeof(GPoint) * new_meteor->path.num_points);
+	new_asteroid->path.num_points = original_path->num_points;
+	new_asteroid->path.points = malloc(sizeof(GPoint) * new_asteroid->path.num_points);
 
 	// Reducing size...
 	unsigned int p;
-	for (p = 0; p < new_meteor->path.num_points; p++)
+	for (p = 0; p < new_asteroid->path.num_points; p++)
 	{
-		new_meteor->path.points[p].x = original_path->points[p].x * (new_meteor->size + 4) / 20;
-		new_meteor->path.points[p].y = original_path->points[p].y * (new_meteor->size + 4) / 20;
+		new_asteroid->path.points[p].x = original_path->points[p].x * (new_asteroid->size + 4) / 20;
+		new_asteroid->path.points[p].y = original_path->points[p].y * (new_asteroid->size + 4) / 20;
 	}
-	new_meteor->draw_path = gpath_create(&new_meteor->path);
-	new_meteor->rot = 0;
-	new_meteor->rot_speed = 1;
-	if (rand() % 2) new_meteor->rot_speed *= -1;
+	new_asteroid->draw_path = gpath_create(&new_asteroid->path);
+	new_asteroid->rot = 0;
+	new_asteroid->rot_speed = 1;
+	if (rand() % 2) new_asteroid->rot_speed *= -1;
 
-	new_meteor->next = NULL;
+	new_asteroid->next = NULL;
 	
-	if (first_meteor == NULL)
-		first_meteor = new_meteor;
+	if (first_asteroid == NULL)
+		first_asteroid = new_asteroid;
 	else {
-		Meteor* meteor = first_meteor;
-		while (meteor->next)
+		Asteroid* asteroid = first_asteroid;
+		while (asteroid->next)
 		{		
-			meteor = meteor->next;
+			asteroid = asteroid->next;
 		}
-		meteor->next = new_meteor;
+		asteroid->next = new_asteroid;
 	}
 }
 
-// Is point part of meteor?
-static bool is_part_of_meteor(int x, int y, int max_r, Meteor* meteor)
+// Is point part of asteroid?
+static bool is_part_of_asteroid(int x, int y, int max_r, Asteroid* asteroid)
 {
-	int r = meteor->size/2 + max_r;
-	int dist_x = x - meteor->x;
-	int dist_y = y - meteor->y;
+	int r = asteroid->size/2 + max_r;
+	int dist_x = x - asteroid->x;
+	int dist_y = y - asteroid->y;
 	return dist_x * dist_x + dist_y * dist_y < r * r;
 }
 
-// Checks ship and meteor interception
-static bool is_boom(Meteor* meteor)
+// Checks ship and asteroid interception
+static bool is_boom(Asteroid* asteroid)
 {
-	return is_part_of_meteor(ship_x, ship_y, 7, meteor);
+	return is_part_of_asteroid(ship_x, ship_y, 7, asteroid);
 }
 
-// Update meteors data
-static void update_meteors()
+// Update asteroids data
+static void update_asteroids()
 {
-	// Moving meteors	
-	Meteor* meteor = first_meteor;
-	while (meteor)
+	// Moving asteroids	
+	Asteroid* asteroid = first_asteroid;
+	while (asteroid)
 	{
-		meteor->x += meteor->speed_x;
-		meteor->y += meteor->speed_y;
+		asteroid->x += asteroid->speed_x;
+		asteroid->y += asteroid->speed_y;
 		// Game over?
-		if (!game_over && is_boom(meteor) && !game_over_stop_time)
+		if (!game_over && is_boom(asteroid) && !game_over_stop_time)
 		{
 			vibes_short_pulse();
 			if (!god_mode)
 				game_over_stop_time = time_ticks + (500 / UPDATE_INTERVAL); // Some more time to rumble...
 			//reset_game();
 		}
-		meteor = meteor->next;
+		asteroid = asteroid->next;
 	}
 	
-	// Removing unused meteors
-	Meteor* prev = NULL;
-	meteor = first_meteor;
-	while (meteor)
+	// Removing unused asteroids
+	Asteroid* prev = NULL;
+	asteroid = first_asteroid;
+	while (asteroid)
 	{
-		Meteor* next = meteor->next;
-		if ((meteor->x < -meteor->size) || (meteor->y < -meteor->size) ||
-			(meteor->x > SCREEN_WIDTH + meteor->size) || (meteor->y > SCREEN_HEIGHT + meteor->size))
+		Asteroid* next = asteroid->next;
+		if ((asteroid->x < -asteroid->size) || (asteroid->y < -asteroid->size) ||
+			(asteroid->x > SCREEN_WIDTH + asteroid->size) || (asteroid->y > SCREEN_HEIGHT + asteroid->size))
 		{
 			if (!game_over && !game_over_stop_time)
 			{
 				// Increasing score
 				score += 10;
-				if (score > hi_score) hi_score = score;
-				// More score - more meteors!
-				if (meteor_interval > 30)
-					meteor_interval -= 2;
-				else if ((score % 100 == 0) && (meteor_interval > 20)) 
-					meteor_interval -= 1;
-				else if ((score % 300 == 0) && (meteor_interval > 15)) 
-					meteor_interval -= 1;
-				else if ((score % 400 == 0) && (meteor_interval > 10)) 
-					meteor_interval -= 1;
-				else if ((score % 500 == 0) && (meteor_interval > 5)) 
-					meteor_interval -= 1;
+				if (score > hi_score && !god_mode) hi_score = score;
+				// More score - more asteroids!
+				if (asteroid_interval > 30)
+					asteroid_interval -= 2;
+				else if ((score % 100 == 0) && (asteroid_interval > 20)) 
+					asteroid_interval -= 1;
+				else if ((score % 300 == 0) && (asteroid_interval > 15)) 
+					asteroid_interval -= 1;
+				else if ((score % 400 == 0) && (asteroid_interval > 10)) 
+					asteroid_interval -= 1;
+				else if ((score % 500 == 0) && (asteroid_interval > 5)) 
+					asteroid_interval -= 1;
 			}
-			gpath_destroy(meteor->draw_path);
-			free(meteor->path.points);
-			free(meteor);
+			gpath_destroy(asteroid->draw_path);
+			free(asteroid->path.points);
+			free(asteroid);
 			if (prev != NULL)
 				prev->next = next;
-			else first_meteor = next;
+			else first_asteroid = next;
 		}
-		else prev = meteor;
-		meteor = next;
+		else prev = asteroid;
+		asteroid = next;
 	}
 }
 
@@ -227,11 +234,11 @@ void update_timer(void* data)
 
 	time_ticks++;
 	
-	// More meteors!
+	// More asteroids!
 	if (((time_ticks >= 5000 / UPDATE_INTERVAL) || (hi_score >= 200) // Newbie? Time for some tutorial
 		|| !started)  // Title screen? Lets go!
-		&& (time_ticks % meteor_interval == 0)) // Or just time is come
-		add_meteor();
+		&& (time_ticks % asteroid_interval == 0)) // Or just time is come
+		add_asteroid();
 
 	// Using accelerometer data to control ship
 	AccelData acc;
@@ -251,8 +258,8 @@ void update_timer(void* data)
 	if (ship_y < 0) ship_y = 0;
 	if (ship_y > SCREEN_HEIGHT) ship_y = SCREEN_HEIGHT;
 	
-	// Moving meteors, updating, etc.
-	update_meteors();
+	// Moving asteroids, updating, etc.
+	update_asteroids();
 }
 
 static void game_draw(Layer *layer, GContext *ctx)
@@ -269,22 +276,22 @@ static void game_draw(Layer *layer, GContext *ctx)
 		graphics_draw_bitmap_in_rect(ctx, ship_bitmap, GRect(ship_x - SHIP_WIDTH / 2, ship_y - SHIP_HEIGHT / 2, SHIP_WIDTH, SHIP_HEIGHT));
 	}
 	
-	// Draw all meteors	
-	Meteor* meteor = first_meteor;
-	int meteor_count = 0;
-	while (meteor)
+	// Draw all asteroids	
+	Asteroid* asteroid = first_asteroid;
+	int asteroid_count = 0;
+	while (asteroid)
 	{
-		if (meteor->size < 8 || !use_shapes)
+		if (asteroid->size < 8 || !use_shapes)
 		{
-			graphics_fill_circle(ctx, (GPoint) { .x = meteor->x, .y = meteor->y }, meteor->size / 2);
+			graphics_fill_circle(ctx, (GPoint) { .x = asteroid->x, .y = asteroid->y }, asteroid->size / 2);
 		} else {		
-			gpath_move_to(meteor->draw_path, GPoint(meteor->x, meteor->y));
-			gpath_rotate_to(meteor->draw_path, TRIG_MAX_ANGLE / 360 * (meteor->rot += meteor->rot_speed));
-			gpath_draw_filled(ctx, meteor->draw_path);
-		//gpath_draw_outline(ctx, meteor->draw_path);
+			gpath_move_to(asteroid->draw_path, GPoint(asteroid->x, asteroid->y));
+			gpath_rotate_to(asteroid->draw_path, TRIG_MAX_ANGLE / 360 * (asteroid->rot += asteroid->rot_speed));
+			gpath_draw_filled(ctx, asteroid->draw_path);
+		//gpath_draw_outline(ctx, asteroid->draw_path);
 		}
-		meteor_count++;
-		meteor = meteor->next;
+		asteroid_count++;
+		asteroid = asteroid->next;
 	}
 	
 	// Score
@@ -367,7 +374,7 @@ static void game_draw(Layer *layer, GContext *ctx)
 	{
 		GFont *debug_font = fonts_get_system_font(FONT_KEY_GOTHIC_14);
 		char debug_text[200];
-		snprintf(debug_text, sizeof(debug_text), "AccX: %.5d\r\nAccY: %.5d\r\nSpeedX: %d\r\nSpeedY: %d\r\nShipX: %d\r\nShipY: %d\r\nMeteors: %d\r\nInterval: %d\r\nTime: %d", acc_x, acc_y, (int)speed_x, (int)speed_y, (int)ship_x, (int)ship_y, meteor_count, meteor_interval, (int)time_ticks);
+		snprintf(debug_text, sizeof(debug_text), "SpeedX: %d\r\nSpeedY: %d\r\nShipX: %d\r\nShipY: %d\r\nAsteroids: %d\r\nInterval: %d\r\nTime: %d", (int)speed_x, (int)speed_y, (int)ship_x, (int)ship_y, asteroid_count, asteroid_interval, (int)time_ticks);
 		graphics_draw_text(ctx, debug_text, debug_font, (GRect) { .origin = {0, 0}, .size = {144, 168} }, GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
 	}
 }
@@ -378,25 +385,25 @@ static void destroy_ui(void) {
 	gbitmap_destroy(ship_bitmap);
 }
 
-static void free_meteors()
+static void free_asteroids()
 {
-	Meteor* meteor = first_meteor;
-	while (meteor)
+	Asteroid* asteroid = first_asteroid;
+	while (asteroid)
 	{
-		Meteor* next = meteor->next;
-		gpath_destroy(meteor->draw_path);
-		free(meteor->path.points);
-		free(meteor);
-		meteor = next;
+		Asteroid* next = asteroid->next;
+		gpath_destroy(asteroid->draw_path);
+		free(asteroid->path.points);
+		free(asteroid);
+		asteroid = next;
 	}
-	first_meteor = NULL;
+	first_asteroid = NULL;
 }
 
 static void handle_window_unload(Window* window) {
 	app_timer_cancel(timer);	// Cancel timer
 	accel_data_service_unsubscribe();	// Disabling accelerometer
 	app_focus_service_unsubscribe(); // Unsubscribing from focus
-	free_meteors();									// Free memory from meteors
+	free_asteroids();									// Free memory from asteroids
   destroy_ui();									// Free memory from UI
 	persist_write_int(0, hi_score); // Saving hi score
 }
@@ -440,29 +447,31 @@ static void config_provider(void *context)
   window_single_click_subscribe(BUTTON_ID_DOWN, click_handler);
 	window_long_click_subscribe(BUTTON_ID_UP, 10000, long_up_handler, NULL);
 	window_long_click_subscribe(BUTTON_ID_SELECT, 10000, long_select_handler, NULL);
-	window_long_click_subscribe(BUTTON_ID_DOWN, 1000, long_down_handler, NULL);
+	window_long_click_subscribe(BUTTON_ID_DOWN, 3000, long_down_handler, NULL);
 }
 
 void reset_game()
 {
 	srand(time(NULL));
-	free_meteors();
+	free_asteroids();
 	time_ticks = 0;
 	ship_x = SCREEN_WIDTH / 2;
 	ship_y = SCREEN_HEIGHT / 2;	
-	meteor_interval = METEOR_START_INTERVAL;
+	asteroid_interval = ASTEROID_START_INTERVAL;
 	score = 0;
 	game_over_stop_time = 0;
 	game_over =  false;
 	paused = false;
+	use_shapes = true;
 	started = true;
 }
 
 void show_game() {
-	reset_game();
+	reset_game();	
 	game_over = true;
 	started = false;
-	meteor_interval = 5;
+	asteroid_interval = 5;
+	use_shapes = false;
 	
 	// Reading hi-score from memory
 	if (persist_exists(0))	
