@@ -395,12 +395,18 @@ static void free_asteroids()
 }
 
 static void handle_window_unload(Window* window) {
-	app_timer_cancel(timer);	// Cancel timer
-	accel_data_service_unsubscribe();	// Disabling accelerometer
-	app_focus_service_unsubscribe(); // Unsubscribing from focus
-	free_asteroids();									// Free memory from asteroids
-  destroy_ui();									// Free memory from UI
-	persist_write_int(0, hi_score); // Saving hi score
+	// Cancel timer
+	app_timer_cancel(timer);
+	// Disabling accelerometer
+	accel_data_service_unsubscribe();
+	// Unsubscribing from focus
+	app_focus_service_unsubscribe();
+	// Free memory from asteroids
+	free_asteroids();
+	// Free memory from UI
+	destroy_ui();
+	// Saving hi score
+	persist_write_int(0, hi_score);
 }
 
 // Automatic pause on call/notification
@@ -438,9 +444,9 @@ static void long_down_handler(ClickRecognizerRef recognizer, void *context)
 
 static void config_provider(void *context)
 {
-  window_single_click_subscribe(BUTTON_ID_UP, click_handler);
+	window_single_click_subscribe(BUTTON_ID_UP, click_handler);
 	window_single_click_subscribe(BUTTON_ID_SELECT, click_handler);
-  window_single_click_subscribe(BUTTON_ID_DOWN, click_handler);
+	window_single_click_subscribe(BUTTON_ID_DOWN, click_handler);
 	window_long_click_subscribe(BUTTON_ID_UP, 10000, long_up_handler, NULL);
 	window_long_click_subscribe(BUTTON_ID_SELECT, 10000, long_select_handler, NULL);
 	window_long_click_subscribe(BUTTON_ID_DOWN, 3000, long_down_handler, NULL);
@@ -486,7 +492,7 @@ void show_game() {
 	
 	window_set_window_handlers(s_window, (WindowHandlers) {
 		.unload = handle_window_unload,
-  });
+	});
 
 	// The layer
 	Layer *window_layer = window_get_root_layer(s_window);
