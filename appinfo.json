@@ -3,7 +3,7 @@
   "shortName": "Space Dragon",
   "longName": "Space Dragon",
   "companyName": "Cluster",
-  "versionCode": 6,
+  "versionCode": 7,
   "versionLabel": "1.5",
   "watchapp": {
     "watchface": false
@@ -11,19 +11,19 @@
   "appKeys": {
     "dummy": 0
   },
-  "resources": {
-    "media": [
-        {
-						"file": "images/ship.png",
-            "name": "IMAGE_SHIP",
-            "type": "png"
-        },
-        {
-						"file": "images/icon.png",
-            "menuIcon": true,
-            "name": "IMAGE_ICON",
-            "type": "png"
-        }
+	"resources": {
+		"media": [
+			{
+				"file": "images/ship.png",
+				"name": "IMAGE_SHIP",
+				"type": "png"
+			},
+			{
+				"file": "images/icon.png",
+				"menuIcon": true,
+				"name": "IMAGE_ICON",
+				"type": "png"
+			}
 		]
   }
 }

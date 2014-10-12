@@ -162,7 +162,7 @@ static void update_asteroids()
 		asteroid->x += asteroid->speed_x;
 		asteroid->y += asteroid->speed_y;
 		// Game over?
-		if (!god_mode && is_boom(asteroid) && !game_over_stop_time)
+		if (!game_over && !god_mode && is_boom(asteroid) && !game_over_stop_time)
 		{
 			vibes_short_pulse();
 			game_over_stop_time = time_ticks + (500 / UPDATE_INTERVAL); // Some more time to rumble...
